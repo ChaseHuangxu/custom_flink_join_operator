@@ -18,6 +18,8 @@ import org.apache.flink.util.Collector;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
 
 
 import java.io.File;
@@ -59,14 +61,19 @@ public class CustomJoinDemo {
     }
 
     public static class CustomPartitioner implements Partitioner<Integer> {
-        int singlePartitionRange = -1;
+        ZipfGenerator zipf = new ZipfGenerator(Consts.TEST_BATCH_KEY_RANGE, 0.3);
+        List<Integer> separatorNums = zipf.getSeparatorNum(Consts.TEST_NUM_PARTITIONS);
 
         @Override
         public int partition(Integer key, int numPartitions) {
-            if (singlePartitionRange == -1) {
-                singlePartitionRange = Consts.TEST_STREAM_KEY_RANGE / numPartitions;
+            int partitionIdx = numPartitions - 1;
+            for(int j = 0; j < separatorNums.size(); j ++) {
+                if (key <= separatorNums.get(j)) {
+                    partitionIdx = j;
+                    break;
+                }
             }
-            return key / singlePartitionRange;
+            return partitionIdx;
         }
     }
 
